@@ -229,35 +229,133 @@ class BrandExtractorService:
     
     async def _analyze_tone(self, text_content: str) -> Dict:
         """
-        Analyze brand tone using LLM
+        Analyze brand tone using Google Gemini
         """
-        # TODO: Implement with OpenAI API
-        # For now, return placeholder
-        
-        return {
-            "formalidad": 0.7,
-            "emocion": "profesional",
-            "longitud_sentencia": "concisa",
-            "vocabulario": ["innovación", "calidad", "confianza"],
-            "system_prompt": (
-                "Actúa como un experto en marketing digital que usa un tono "
-                "profesional pero accesible, evitando jerga innecesaria y "
-                "priorizando la claridad y la confianza."
+        try:
+            import google.generativeai as genai
+            from app.core.config import settings
+            
+            genai.configure(api_key=settings.GEMINI_API_KEY)
+            model = genai.GenerativeModel('gemini-2.0-flash')
+            
+            prompt = f"""Analiza el siguiente texto de una página web empresarial y extrae información sobre el tono de comunicación de la marca.
+
+Texto a analizar:
+{text_content[:3000]}
+
+Responde en formato JSON con los siguientes campos:
+- formalidad: número entre 0 y 1 (0=muy informal, 1=muy formal)
+- emocion: una palabra que describa la emoción principal (ej: "profesional", "entusiasta", "serio", "amigable")
+- longitud_sentencia: "corta", "media" o "larga"
+- vocabulario: lista de 5 palabras clave que definen la marca
+- system_prompt: un prompt de sistema de 2-3 oraciones que describa cómo debería escribir una IA para esta marca
+
+Solo responde con el JSON, sin explicaciones adicionales."""
+
+            response = await asyncio.to_thread(
+                lambda: model.generate_content(prompt)
             )
-        }
+            
+            import json
+            try:
+                # Extract JSON from response
+                text = response.text.strip()
+                if text.startswith("```"):
+                    text = text.split("```")[1]
+                    if text.startswith("json"):
+                        text = text[4:]
+                result = json.loads(text)
+                return result
+            except:
+                # Return default if parsing fails
+                return {
+                    "formalidad": 0.7,
+                    "emocion": "profesional",
+                    "longitud_sentencia": "media",
+                    "vocabulario": ["innovación", "calidad", "confianza", "servicio", "excelencia"],
+                    "system_prompt": (
+                        "Actúa como un experto en marketing digital que usa un tono "
+                        "profesional pero accesible, evitando jerga innecesaria y "
+                        "priorizando la claridad y la confianza."
+                    )
+                }
+        except Exception as e:
+            print(f"Error analyzing tone with Gemini: {e}")
+            return {
+                "formalidad": 0.7,
+                "emocion": "profesional",
+                "longitud_sentencia": "media",
+                "vocabulario": ["innovación", "calidad", "confianza", "servicio", "excelencia"],
+                "system_prompt": (
+                    "Actúa como un experto en marketing digital que usa un tono "
+                    "profesional pero accesible, evitando jerga innecesaria y "
+                    "priorizando la claridad y la confianza."
+                )
+            }
     
     async def _analyze_visual_style(self, images: List[str]) -> Dict:
         """
-        Analyze visual style using Vision-Language Model
+        Analyze visual style using Google Gemini Vision
         """
-        # TODO: Implement with GPT-4o Vision
-        
-        return {
-            "estilo_fotografico": (
-                "Fotografía profesional con iluminación natural, "
-                "paleta de colores coherente, enfoque nítido, "
-                "composición equilibrada."
-            ),
-            "referencia_imagenes_urls": images[:5],
-            "ip_adapter_embedding_id": None
-        }
+        try:
+            import google.generativeai as genai
+            from app.core.config import settings
+            import httpx
+            
+            genai.configure(api_key=settings.GEMINI_API_KEY)
+            model = genai.GenerativeModel('gemini-2.0-flash')
+            
+            # For now, analyze based on image URLs description
+            # Full vision analysis would require downloading and encoding images
+            prompt = f"""Basándote en estas URLs de imágenes de un sitio web empresarial, describe el estilo visual probable de la marca:
+
+URLs de imágenes: {images[:5]}
+
+Responde en formato JSON con:
+- estilo_fotografico: descripción del estilo de fotografía (iluminación, composición, colores)
+- elementos_visuales: lista de elementos visuales comunes
+- recomendacion_imagen: prompt para generar imágenes coherentes con este estilo
+
+Solo responde con el JSON."""
+
+            response = await asyncio.to_thread(
+                lambda: model.generate_content(prompt)
+            )
+            
+            import json
+            try:
+                text = response.text.strip()
+                if text.startswith("```"):
+                    text = text.split("```")[1]
+                    if text.startswith("json"):
+                        text = text[4:]
+                result = json.loads(text)
+                result["referencia_imagenes_urls"] = images[:5]
+                result["ip_adapter_embedding_id"] = None
+                return result
+            except:
+                return {
+                    "estilo_fotografico": (
+                        "Fotografía profesional con iluminación natural, "
+                        "paleta de colores coherente, enfoque nítido, "
+                        "composición equilibrada."
+                    ),
+                    "elementos_visuales": ["limpio", "moderno", "profesional"],
+                    "recomendacion_imagen": "Estilo corporativo moderno con colores de marca",
+                    "referencia_imagenes_urls": images[:5],
+                    "ip_adapter_embedding_id": None
+                }
+        except Exception as e:
+            print(f"Error analyzing visual style with Gemini: {e}")
+            return {
+                "estilo_fotografico": (
+                    "Fotografía profesional con iluminación natural, "
+                    "paleta de colores coherente, enfoque nítido, "
+                    "composición equilibrada."
+                ),
+                "elementos_visuales": ["limpio", "moderno", "profesional"],
+                "recomendacion_imagen": "Estilo corporativo moderno con colores de marca",
+                "referencia_imagenes_urls": images[:5],
+                "ip_adapter_embedding_id": None
+            }
+

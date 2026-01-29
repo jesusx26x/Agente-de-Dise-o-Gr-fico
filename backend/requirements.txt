@@ -9,7 +9,7 @@ asyncpg==0.29.0
 sqlalchemy==2.0.25
 
 # AI/ML
-openai==1.12.0
+google-generativeai==0.8.0
 langchain==0.1.5
 langgraph==0.0.20
 replicate==0.23.0

@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     SUPABASE_KEY: str = ""
     SUPABASE_SERVICE_KEY: str = ""
     
-    # OpenAI
-    OPENAI_API_KEY: str = ""
+    # Google Gemini AI
+    GEMINI_API_KEY: str = ""
     
     # Replicate (FLUX.1)
     REPLICATE_API_TOKEN: str = ""
