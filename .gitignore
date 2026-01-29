@@ -53,6 +53,7 @@ Thumbs.db
 node_modules/
 .next/
 out/
+!frontend/src/lib/
 
 # Testing
 .coverage
